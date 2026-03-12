@@ -12,11 +12,9 @@ export const POST = async ({ request }: { request: Request }) => {
 
         let creds = (global as any).lastSatCreds;
         
-        // Si el cliente manda credenciales, las usamos (útil tras reinicio)
+        // Si el cliente manda credenciales (base64 o data url), las usamos
         if (cerBase64 && keyBase64 && password) {
-            const cerBuffer = Buffer.from(cerBase64, 'base64');
-            const keyBuffer = Buffer.from(keyBase64, 'base64');
-            creds = await SATService.parseCredentials(cerBuffer, keyBuffer, password);
+            creds = await SATService.parseCredentials(cerBase64, keyBase64, password);
             (global as any).lastSatCreds = creds;
         }
 

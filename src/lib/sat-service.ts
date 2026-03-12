@@ -19,17 +19,25 @@ export class SATService {
             .trim();
     }
 
-    static async parseCredentials(cerBuffer: any, keyBuffer: any, password: string) {
+    static async parseCredentials(cerInput: any, keyInput: any, password: string) {
         try {
-            if (!cerBuffer || !keyBuffer) {
-                throw new Error('Certificado o Llave no proporcionados (Buffers vacíos).');
+            if (!cerInput || !keyInput) {
+                throw new Error('Certificado o Llave no proporcionados.');
             }
 
+            const toBinary = (input: any) => {
+                if (Buffer.isBuffer(input)) return input.toString('binary');
+                if (typeof input === 'string') {
+                    // Si es un Data URL (Vite/Astro FileReader result), quitar prefijo
+                    const base64 = input.includes(',') ? input.split(',')[1] : input;
+                    return Buffer.from(base64, 'base64').toString('binary');
+                }
+                return Buffer.from(input).toString('binary');
+            };
+
             console.log('SATService: Pasando buffers a binary string...');
-            
-            // Asegurarnos de tener strings binarios para forge
-            const cerBinary = Buffer.isBuffer(cerBuffer) ? cerBuffer.toString('binary') : Buffer.from(cerBuffer).toString('binary');
-            const keyBinary = Buffer.isBuffer(keyBuffer) ? keyBuffer.toString('binary') : Buffer.from(keyBuffer).toString('binary');
+            const cerBinary = toBinary(cerInput);
+            const keyBinary = toBinary(keyInput);
 
             console.log('SATService: Parseando ASN1 del certificado...');
             const asn1Cer = forge.asn1.fromDer(cerBinary);

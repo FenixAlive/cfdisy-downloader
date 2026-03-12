@@ -15,16 +15,10 @@ export const POST = async ({ request }: { request: Request }) => {
 
         let creds = (global as any).lastSatCreds;
 
-        // Si se proporcionan credenciales en el cuerpo (base64), las procesamos
+        // Si se proporcionan credenciales en el cuerpo (base64 o data url), las procesamos
         if (cerBase64 && keyBase64 && password) {
             try {
-                const cleanCer = cerBase64.includes(',') ? cerBase64.split(',')[1] : cerBase64;
-                const cleanKey = keyBase64.includes(',') ? keyBase64.split(',')[1] : keyBase64;
-                
-                const cerBuffer = Buffer.from(cleanCer, 'base64');
-                const keyBuffer = Buffer.from(cleanKey, 'base64');
-                
-                creds = await SATService.parseCredentials(cerBuffer, keyBuffer, password);
+                creds = await SATService.parseCredentials(cerBase64, keyBase64, password);
                 (global as any).lastSatCreds = creds; // Actualizar caché
             } catch (e: any) {
                 console.error('Error al procesar credenciales enviadas:', e);

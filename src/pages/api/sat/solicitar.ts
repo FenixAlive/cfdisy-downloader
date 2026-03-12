@@ -37,7 +37,11 @@ export const POST = async ({ request }: { request: Request }) => {
             rfcSolicitante: rfcManual || creds.rfc
         });
 
-        return new Response(JSON.stringify({ success: true, requestId }));
+        return new Response(JSON.stringify({ 
+            success: true, 
+            requestId,
+            rfc: rfcManual || creds.rfc 
+        }));
     } catch (error: any) {
         console.error(error);
         return new Response(JSON.stringify({ success: false, message: error.message }), { status: 500 });
