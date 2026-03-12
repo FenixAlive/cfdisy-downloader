@@ -25,6 +25,49 @@
             --success: #10b981;
         }
 
+        /* Page internal push (toasts) */
+        .page-push-container {
+            position: fixed;
+            top: 1rem;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: center;
+            pointer-events: none;
+            z-index: 1100;
+        }
+
+        .page-push {
+            pointer-events: auto;
+            min-width: 280px;
+            max-width: 880px;
+            margin: 0 1rem;
+            background: rgba(15,23,42,0.95);
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 0.75rem 1rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 30px rgba(2,6,23,0.6);
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+            transform: translateY(-10px);
+            opacity: 0;
+            transition: transform 0.25s, opacity 0.25s;
+        }
+
+        .page-push.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .page-push .push-title { font-weight: 700; }
+        .page-push .push-body { color: var(--text-dim); font-size: 0.95rem; }
+
+        .page-push.info { border-left: 4px solid #60a5fa; }
+        .page-push.success { border-left: 4px solid #10b981; }
+        .page-push.error { border-left: 4px solid #f43f5e; }
+
         body {
             font-family: 'Outfit', sans-serif;
             background-color: var(--bg);
@@ -324,6 +367,7 @@
     </style>
 </head>
 <body>
+    <div id="pagePushContainer" class="page-push-container"></div>
     <div class="container">
         <header>
             <h1>CFDIsy Downloader</h1>
@@ -410,9 +454,23 @@
 
         <div class="status-container" id="statusContainer">
             <h2>Solicitudes en Curso</h2>
-            <ul class="download-list" id="downloadList">
-                <!-- Solicitudes se añadirán aquí -->
-            </ul>
+            <div class="table-responsive">
+                <table class="requests-table" id="requestsTable" style="width:100%;">
+                    <thead>
+                        <tr>
+                            <th style="width:14%;">RFC</th>
+                            <th style="width:12%;">Solicitud</th>
+                            <th style="width:24%;">Rango</th>
+                            <th style="width:10%;">Tipo</th>
+                            <th style="width:18%;">Estado</th>
+                            <th style="width:22%;">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="downloadList">
+                        <!-- Solicitudes se añadirán aquí como filas -->
+                    </tbody>
+                </table>
+            </div>
         </div>
 
         <div class="card" id="historyCard" style="margin-top: 2.5rem; display: none;">
@@ -457,7 +515,11 @@
             <div class="modal-icon" id="modalIcon">🔔</div>
             <div class="modal-title" id="modalTitle">Atención</div>
             <div class="modal-message" id="modalMessage">Mensaje informativo.</div>
-            <button class="modal-btn" id="modalClose">Entendido</button>
+            <div style="display:flex; gap:0.5rem; justify-content:center; margin-top:1rem;">
+                <button class="modal-btn" id="modalConfirm" style="display:none; background: var(--success);">Confirmar</button>
+                <button class="modal-btn" id="modalCancel" style="display:none; background: rgba(244, 63, 94, 0.06); color: var(--accent);">Cancelar</button>
+                <button class="modal-btn" id="modalClose">Entendido</button>
+            </div>
         </div>
     </div>
 
@@ -539,6 +601,8 @@
         const modalTitle = document.getElementById('modalTitle') as HTMLElement;
         const modalMessage = document.getElementById('modalMessage') as HTMLElement;
         const modalClose = document.getElementById('modalClose') as HTMLButtonElement;
+        const modalConfirm = document.getElementById('modalConfirm') as HTMLButtonElement;
+        const modalCancel = document.getElementById('modalCancel') as HTMLButtonElement;
 
         function showModal(title: string, message: string, type: 'info' | 'success' | 'error' = 'info') {
             modalTitle.textContent = title;
@@ -548,12 +612,77 @@
             else if (type === 'error') modalIcon.textContent = '❌';
             else modalIcon.textContent = '🔔';
             
+            // Configure buttons: only the simple close is visible for informational dialogs
+            modalClose.style.display = 'inline-block';
+            if (modalConfirm) modalConfirm.style.display = 'none';
+            if (modalCancel) modalCancel.style.display = 'none';
             modalOverlay.classList.add('active');
         }
 
         modalClose.addEventListener('click', () => {
             modalOverlay.classList.remove('active');
         });
+
+        function showConfirm(title: string, message: string) {
+            return new Promise<boolean>((resolve) => {
+                modalTitle.textContent = title;
+                modalMessage.textContent = message;
+                modalIcon.textContent = '❗';
+
+                // Show confirm/cancel, hide plain close
+                modalClose.style.display = 'none';
+                if (modalConfirm) modalConfirm.style.display = 'inline-block';
+                if (modalCancel) modalCancel.style.display = 'inline-block';
+
+                const cleanup = () => {
+                    modalOverlay.classList.remove('active');
+                    if (modalConfirm) modalConfirm.onclick = null;
+                    if (modalCancel) modalCancel.onclick = null;
+                };
+
+                if (modalConfirm) modalConfirm.onclick = () => { cleanup(); resolve(true); };
+                if (modalCancel) modalCancel.onclick = () => { cleanup(); resolve(false); };
+
+                modalOverlay.classList.add('active');
+            });
+        }
+
+        function showToast(title: string, message: string, type: 'info' | 'success' | 'error' = 'info', timeout = 5000) {
+            const container = document.getElementById('pagePushContainer');
+            if (!container) { showModal(title, message, type); return; }
+
+            const push = document.createElement('div');
+            push.className = `page-push ${type}`;
+            push.innerHTML = `<div style="flex:1"><div class="push-title">${title}</div><div class="push-body">${message}</div></div><div style="margin-left:8px; opacity:0.8; cursor:pointer;">✕</div>`;
+
+            const closeBtn = push.querySelector('div:last-child') as HTMLElement;
+            closeBtn.addEventListener('click', () => {
+                push.classList.remove('show');
+                setTimeout(() => push.remove(), 300);
+            });
+
+            container.appendChild(push);
+            // allow layout
+            requestAnimationFrame(() => push.classList.add('show'));
+
+            const hide = () => {
+                push.classList.remove('show');
+                setTimeout(() => { try { push.remove(); } catch {} }, 300);
+            };
+
+            const t = setTimeout(hide, timeout);
+            push.addEventListener('mouseenter', () => clearTimeout(t));
+            push.addEventListener('mouseleave', () => setTimeout(hide, 2000));
+        }
+
+        function maybeNotify(title: string, message: string, type: 'info' | 'success' | 'error' = 'info') {
+            // Use internal page push for non-error notifications
+            if (type === 'error') {
+                showModal(title, message, type);
+            } else {
+                showToast(title, message, type);
+            }
+        }
 
         // Estructura de credenciales guardadas...
         let savedCredentials = JSON.parse(localStorage.getItem('satCredentials') || '{}');
@@ -642,27 +771,36 @@
                     if (req.status === 'error') statusLabel = 'Error';
 
                     return `
-                        <li class="download-item">
-                            <div class="item-info">
-                                <h3 style="color: var(--primary); margin-bottom: 2px;">RFC: ${req.rfc || 'N/A'}</h3>
-                                <p style="font-size: 0.75rem; opacity: 0.7; margin-bottom: 4px;">Solicitud: ${req.id}</p>
-                                <p>${req.dateStart} al ${req.dateEnd} | ${req.type}</p>
-                                <p style="margin-top: 4px; font-weight: 600;" class="text-${req.status}">${statusLabel}</p>
-                            </div>
-                            <div class="item-actions" style="display: flex; gap: 0.5rem; align-items: center;">
-                                ${req.status === 'ready' || req.status === 'downloaded' ? `
-                                    <button class="btn-download" data-id="${req.id}" style="background: ${req.status === 'downloaded' ? 'var(--primary)' : 'var(--success)'}; color: white; border: none; padding: 0.5rem 1rem; border-radius: 0.5rem; cursor: pointer; font-weight: 600; font-size: 0.8rem;">
-                                        ${req.status === 'downloaded' ? 'Re-descargar ZIP' : 'Descargar ZIP'}
-                                    </button>
-                                ` : ''}
-                                ${req.status === 'downloaded' || req.status === 'error' ? `
-                                    <button class="btn-delete" data-index="${index}" style="background: rgba(244, 63, 94, 0.1); color: var(--accent); border: 1px solid var(--accent); padding: 0.5rem; border-radius: 0.5rem; cursor: pointer; font-size: 0.7rem;">
-                                        Eliminar
-                                    </button>
-                                ` : ''}
-                                ${req.status === 'pending' ? '<div class="loader"></div>' : ''}
-                            </div>
-                        </li>
+                        <tr class="download-row">
+                            <td style="vertical-align: middle;"><strong>${req.rfc || 'N/A'}</strong></td>
+                            <td style="vertical-align: middle; font-size:0.85rem; opacity:0.8;">${req.id}</td>
+                            <td style="vertical-align: middle; font-size:0.85rem;">${req.dateStart} al ${req.dateEnd}</td>
+                            <td style="vertical-align: middle;">${req.type}</td>
+                            <td style="vertical-align: middle;"><span class="text-${req.status}" style="font-weight:600;">${statusLabel}</span></td>
+                            <td style="vertical-align: middle;">
+                                <div style="display:flex; gap:0.4rem; align-items:center; justify-content:flex-end;">
+                                    ${req.status === 'ready' || req.status === 'downloaded' ? `
+                                        <button class="btn-download" data-id="${req.id}" style="background: ${req.status === 'downloaded' ? 'var(--primary)' : 'var(--success)'}; color: white; border: none; padding: 0.4rem 0.7rem; border-radius: 0.4rem; cursor: pointer; font-weight: 600; font-size: 0.8rem;">
+                                            ${req.status === 'downloaded' ? 'Re-descargar ZIP' : 'Descargar ZIP'}
+                                        </button>
+                                    ` : ''}
+                                    ${req.status === 'downloaded' || req.status === 'error' ? `
+                                        <button class="btn-delete" data-index="${index}" style="background: rgba(244, 63, 94, 0.06); color: var(--accent); border: 1px solid rgba(244,63,94,0.2); padding: 0.35rem 0.6rem; border-radius: 0.4rem; cursor: pointer; font-size: 0.75rem;">
+                                            Eliminar
+                                        </button>
+                                    ` : ''}
+                                    ${req.status === 'pending' ? `
+                                        <button class="btn-verify-now" data-id="${req.id}" style="background: rgba(99,102,241,0.08); color: var(--primary); border: 1px solid rgba(99,102,241,0.12); padding: 0.35rem 0.6rem; border-radius: 0.4rem; cursor: pointer; font-size: 0.75rem; font-weight:600;">
+                                            Verificar Ahora
+                                        </button>
+                                        <button class="btn-delete-pending" data-index="${index}" style="background: rgba(244, 63, 94, 0.06); color: var(--accent); border: 1px solid rgba(244,63,94,0.2); padding: 0.35rem 0.6rem; border-radius: 0.4rem; cursor: pointer; font-size: 0.75rem;">
+                                            Eliminar
+                                        </button>
+                                        <div class="loader" style="margin-left:0.25rem;"></div>
+                                    ` : ''}
+                                </div>
+                            </td>
+                        </tr>
                     `;
                 }).join('');
 
@@ -686,6 +824,65 @@
                         activeRequests.splice(index, 1);
                         localStorage.setItem('satRequests', JSON.stringify(activeRequests));
                         updateUI();
+                    });
+                });
+
+                document.querySelectorAll('.btn-verify-now').forEach(btn => {
+                    btn.addEventListener('click', async (e) => {
+                        const id = (e.target as HTMLElement).getAttribute('data-id');
+                        const button = e.target as HTMLButtonElement;
+                        const request = activeRequests.find((r: any) => r.id === id);
+                        if (!request) return;
+
+                        try {
+                            button.disabled = true;
+                            const origText = button.textContent;
+                            button.textContent = 'Verificando...';
+
+                            const creds = savedCredentials[request.rfc];
+                            const body: any = { id: request.id, cerBase64: creds?.cerBase64, keyBase64: creds?.keyBase64, password: creds?.password };
+
+                            const res = await fetch(`/api/sat/verificar`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(body)
+                            });
+                            const check = await res.json();
+
+                            if (check.status === 'ready') {
+                                request.status = 'ready';
+                                request.packageId = check.packageId;
+                                localStorage.setItem('satRequests', JSON.stringify(activeRequests));
+                                updateUI();
+
+                                // Descargar inmediatamente si está listo
+                                await processDownload(request);
+                                updateUI();
+                            } else {
+                                // No está listo aún
+                                maybeNotify('Aún Pendiente', 'La solicitud todavía se encuentra en proceso en el SAT. Reintenta más tarde.', 'info');
+                                button.textContent = origText;
+                                button.disabled = false;
+                            }
+                        } catch (err) {
+                            console.error('Error al verificar manualmente:', err);
+                                showModal('Error', 'Ocurrió un error al verificar la solicitud.', 'error');
+                            button.disabled = false;
+                        }
+                    });
+                });
+
+                document.querySelectorAll('.btn-delete-pending').forEach(btn => {
+                    btn.addEventListener('click', async (e) => {
+                        const index = parseInt((e.target as HTMLElement).getAttribute('data-index')!);
+                        if (!Number.isNaN(index)) {
+                            const confirmed = await showConfirm('Confirmar eliminación', '¿Eliminar esta solicitud pendiente?');
+                            if (confirmed) {
+                                activeRequests.splice(index, 1);
+                                localStorage.setItem('satRequests', JSON.stringify(activeRequests));
+                                updateUI();
+                            }
+                        }
                     });
                 });
             } else {
@@ -791,8 +988,8 @@
                     'Versión': xml.version
                 }));
 
-            if (worksheetData.length === 0) {
-                showModal('Sin Datos', `No hay facturas ${tipo} para exportar.`, 'info');
+                if (worksheetData.length === 0) {
+                maybeNotify('Sin Datos', `No hay facturas ${tipo} para exportar.`, 'info');
                 return;
             }
 

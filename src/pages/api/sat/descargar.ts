@@ -1,5 +1,5 @@
 import { SATService } from '../../../lib/sat-service';
-import AdmZip from 'adm-zip';
+import JSZip from 'jszip';
 
 export const POST = async ({ request }: { request: Request }) => {
     try {
@@ -10,31 +10,26 @@ export const POST = async ({ request }: { request: Request }) => {
             return new Response(JSON.stringify({ success: false, message: 'ID de paquete requerido.' }), { status: 400 });
         }
 
-        let creds = (global as any).lastSatCreds;
-        
-        // Si el cliente manda credenciales (base64 o data url), las usamos
-        if (cerBase64 && keyBase64 && password) {
-            creds = await SATService.parseCredentials(cerBase64, keyBase64, password);
-            (global as any).lastSatCreds = creds;
+        if (!cerBase64 || !keyBase64 || !password) {
+            return new Response(JSON.stringify({ success: false, message: 'Credenciales requeridas (cerBase64, keyBase64, password).' }), { status: 400 });
         }
 
-        if (!creds) throw new Error('Credenciales no encontradas. Reintente la solicitud desde el inicio.');
-
+        const creds = await SATService.parseCredentials(cerBase64, keyBase64, password);
         const token = await SATService.getAccessToken(creds);
         const base64Zip = await SATService.descargarPaquete(creds, token, packageId);
 
         if (!base64Zip) throw new Error('El SAT no devolvió el contenido del paquete (puede estar aún procesándose internamente).');
 
         const zipBuffer = Buffer.from(base64Zip, 'base64');
-        const zip = new AdmZip(zipBuffer);
-        const zipEntries = zip.getEntries();
+        const zip = await JSZip.loadAsync(zipBuffer);
 
-        const xmls = zipEntries
-            .filter((entry: any) => entry.entryName.endsWith('.xml'))
-            .map((entry: any) => ({
-                name: entry.entryName,
-                content: entry.getData().toString('utf8')
-            }));
+        const xmls: { name: string; content: string }[] = [];
+        for (const [name, file] of Object.entries(zip.files)) {
+            if (name.endsWith('.xml') && !file.dir) {
+                const content = await file.async('string');
+                xmls.push({ name, content });
+            }
+        }
 
         return new Response(JSON.stringify({ 
             success: true, 
