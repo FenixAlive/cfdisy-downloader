@@ -96,6 +96,13 @@
             color: var(--text-dim);
         }
 
+        .hint {
+            font-size: 0.7rem;
+            opacity: 0.6;
+            margin-left: 4px;
+            font-weight: 400;
+        }
+
         input, select {
             background: rgba(15, 23, 42, 0.5);
             border: 1px solid var(--border);
@@ -299,12 +306,35 @@
                         <label for="password">Contraseña e.firma</label>
                         <input type="password" id="password" placeholder="Tu contraseña" required />
                     </div>
+                    <div class="form-group full-width" style="border-top: 1px solid var(--border); padding-top: 1rem;">
+                        <label>Relleno rápido por período</label>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <select id="presetYear">
+                                <option value="">Año</option>
+                            </select>
+                            <select id="presetMonth">
+                                <option value="">Mes</option>
+                                <option value="0">Enero</option>
+                                <option value="1">Febrero</option>
+                                <option value="2">Marzo</option>
+                                <option value="3">Abril</option>
+                                <option value="4">Mayo</option>
+                                <option value="5">Junio</option>
+                                <option value="6">Julio</option>
+                                <option value="7">Agosto</option>
+                                <option value="8">Septiembre</option>
+                                <option value="9">Octubre</option>
+                                <option value="10">Noviembre</option>
+                                <option value="11">Diciembre</option>
+                            </select>
+                        </div>
+                    </div>
                     <div class="form-group">
-                        <label for="dateStart">Fecha Inicial</label>
+                        <label for="dateStart">Fecha Inicial <span class="hint">(dd/mm/aaaa)</span></label>
                         <input type="date" id="dateStart" required />
                     </div>
                     <div class="form-group">
-                        <label for="dateEnd">Fecha Final</label>
+                        <label for="dateEnd">Fecha Final <span class="hint">(dd/mm/aaaa)</span></label>
                         <input type="date" id="dateEnd" required />
                     </div>
                     <div class="form-group">
@@ -365,6 +395,46 @@
         const typeInput = document.getElementById('type') as HTMLSelectElement;
         const saveCredsCheckbox = document.getElementById('saveCreds') as HTMLInputElement;
         const savedRfcSelect = document.getElementById('savedRfc') as HTMLSelectElement;
+        const presetYear = document.getElementById('presetYear') as HTMLSelectElement;
+        const presetMonth = document.getElementById('presetMonth') as HTMLSelectElement;
+
+        // Llenar años en el select
+        const currentYear = new Date().getFullYear();
+        for (let y = currentYear; y >= currentYear - 5; y--) {
+            const opt = document.createElement('option');
+            opt.value = y.toString();
+            opt.textContent = y.toString();
+            presetYear.appendChild(opt);
+        }
+
+        function updateDatesFromPreset() {
+            const year = presetYear.value;
+            const month = presetMonth.value;
+            if (year && month) {
+                const y = parseInt(year);
+                const m = parseInt(month);
+                const firstDay = new Date(y, m, 1);
+                const lastDay = new Date(y, m + 1, 0);
+                
+                // Formato ISO para el input date: YYYY-MM-DD
+                const formatDate = (date: Date) => {
+                    const d = date.getDate().toString().padStart(2, '0');
+                    const mo = (date.getMonth() + 1).toString().padStart(2, '0');
+                    const ye = date.getFullYear();
+                    return `${ye}-${mo}-${d}`;
+                };
+                
+                (dateStartInput as HTMLInputElement).value = formatDate(firstDay);
+                (dateEndInput as HTMLInputElement).value = formatDate(lastDay);
+                
+                // Guardar en localStorage
+                localStorage.setItem('satDateStart', (dateStartInput as HTMLInputElement).value);
+                localStorage.setItem('satDateEnd', (dateEndInput as HTMLInputElement).value);
+            }
+        }
+
+        presetYear.addEventListener('change', updateDatesFromPreset);
+        presetMonth.addEventListener('change', updateDatesFromPreset);
 
         const modalOverlay = document.getElementById('modalOverlay') as HTMLElement;
         const modalIcon = document.getElementById('modalIcon') as HTMLElement;
@@ -785,7 +855,7 @@
                     console.error('Error en polling:', e);
                 }
             }
-        }, 60000);
+        }, 30000);
 
     </script>
 </body>
