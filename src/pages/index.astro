@@ -145,9 +145,56 @@
             cursor: not-allowed;
         }
 
-        .status-container {
-            margin-top: 2rem;
-            display: none;
+        .table-responsive {
+            overflow-x: auto;
+            margin-top: 1rem;
+        }
+
+        .xml-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            color: white;
+        }
+
+        .xml-table th {
+            text-align: left;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            font-weight: 600;
+            color: var(--text-dim);
+            border-bottom: 2px solid var(--border);
+        }
+
+        .xml-table td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .xml-table tr:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .xml-table .uuid {
+            font-family: monospace;
+            font-size: 0.75rem;
+            color: var(--primary);
+        }
+
+        .btn-delete-small {
+            background: rgba(244, 63, 94, 0.1);
+            color: #fb7185;
+            border: 1px solid rgba(244, 63, 94, 0.2);
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            font-size: 0.7rem;
+            transition: all 0.2s;
+        }
+
+        .btn-delete-small:hover {
+            background: rgba(244, 63, 94, 0.2);
+            border-color: #fb7185;
         }
 
         .download-list {
@@ -367,6 +414,41 @@
                 <!-- Solicitudes se añadirán aquí -->
             </ul>
         </div>
+
+        <div class="card" id="historyCard" style="margin-top: 2.5rem; display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h2>Facturas Descargadas</h2>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button id="exportExcelEmitidos" class="btn" style="background: var(--success); margin: 0; padding: 0.5rem 1rem; font-size: 0.8rem;">
+                        <span>Exportar Excel (Emitidos)</span>
+                    </button>
+                    <button id="exportExcelRecibidos" class="btn" style="background: var(--success); margin: 0; padding: 0.5rem 1rem; font-size: 0.8rem;">
+                        <span>Exportar Excel (Recibidos)</span>
+                    </button>
+                    <button id="deleteAllXmls" class="btn" style="background: var(--accent); margin: 0; padding: 0.5rem 1rem; font-size: 0.8rem;">
+                        <span>Borrar Todo</span>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="table-responsive">
+                <table class="xml-table" id="xmlTable">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>RFC Emisor</th>
+                            <th>RFC Receptor</th>
+                            <th>UUID</th>
+                            <th>Total</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="xmlTableBody">
+                        <!-- XMLs guardados aquí -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 
     <!-- Modal Template -->
@@ -381,6 +463,14 @@
 
     <script>
         import JSZip from 'jszip';
+        import { XMLParser } from 'fast-xml-parser';
+        import * as XLSX from 'xlsx';
+
+        const parser = new XMLParser({
+            ignoreAttributes: false,
+            attributeNamePrefix: '',
+            removeNSPrefix: true
+        });
 
         const form = document.getElementById('downloadForm') as HTMLFormElement;
         const submitBtn = document.getElementById('submitBtn') as HTMLButtonElement;
@@ -397,6 +487,14 @@
         const savedRfcSelect = document.getElementById('savedRfc') as HTMLSelectElement;
         const presetYear = document.getElementById('presetYear') as HTMLSelectElement;
         const presetMonth = document.getElementById('presetMonth') as HTMLSelectElement;
+
+        const historyCard = document.getElementById('historyCard') as HTMLElement;
+        const xmlTableBody = document.getElementById('xmlTableBody') as HTMLElement;
+        const exportExcelEmitidos = document.getElementById('exportExcelEmitidos') as HTMLButtonElement;
+        const exportExcelRecibidos = document.getElementById('exportExcelRecibidos') as HTMLButtonElement;
+        const deleteAllXmls = document.getElementById('deleteAllXmls') as HTMLButtonElement;
+
+        let savedXmls = JSON.parse(localStorage.getItem('satXmlHistory') || '[]');
 
         // Llenar años en el select
         const currentYear = new Date().getFullYear();
@@ -527,12 +625,18 @@
         dateStartInput.addEventListener('change', () => localStorage.setItem('satDateStart', (dateStartInput as HTMLInputElement).value));
         dateEndInput.addEventListener('change', () => localStorage.setItem('satDateEnd', (dateEndInput as HTMLInputElement).value));
 
+        let nextCheckTime = Date.now() + 30000;
+
         function updateUI() {
             if (!statusContainer || !downloadList) return;
             if (activeRequests.length > 0) {
                 statusContainer.style.display = 'block';
                 downloadList.innerHTML = activeRequests.map((req: any, index: number) => {
                     let statusLabel = 'Pendiente';
+                    if (req.status === 'pending') {
+                        const diff = Math.max(0, Math.ceil((nextCheckTime - Date.now()) / 1000));
+                        statusLabel = `Pendiente (Revisando en ${diff}s)`;
+                    }
                     if (req.status === 'ready') statusLabel = '¡Listo para descargar!';
                     if (req.status === 'downloaded') statusLabel = `Descargado (${req.xmlCount} XMLs)`;
                     if (req.status === 'error') statusLabel = 'Error';
@@ -590,6 +694,116 @@
         }
 
         updateUI();
+
+        function updateHistoryUI() {
+            if (savedXmls.length > 0) {
+                historyCard.style.display = 'block';
+                xmlTableBody.innerHTML = savedXmls.map((xml: any, index: number) => `
+                    <tr>
+                        <td>${xml.fecha ? xml.fecha.split('T')[0] : 'N/A'}</td>
+                        <td>${xml.emisorRfc || 'N/A'}</td>
+                        <td>${xml.receptorRfc || 'N/A'}</td>
+                        <td class="uuid">${xml.uuid || 'N/A'}</td>
+                        <td style="font-weight: 600;">$${Number(xml.total || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}</td>
+                        <td>
+                            <button class="btn-delete-small" data-index="${index}">Borrar</button>
+                        </td>
+                    </tr>
+                `).join('');
+
+                document.querySelectorAll('.btn-delete-small').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const index = parseInt((e.target as HTMLElement).getAttribute('data-index')!);
+                        savedXmls.splice(index, 1);
+                        localStorage.setItem('satXmlHistory', JSON.stringify(savedXmls));
+                        updateHistoryUI();
+                    });
+                });
+            } else {
+                historyCard.style.display = 'none';
+            }
+        }
+
+        updateHistoryUI();
+
+        deleteAllXmls.addEventListener('click', () => {
+            if (confirm('¿Estás seguro de que deseas borrar todo el historial de facturas?')) {
+                savedXmls = [];
+                localStorage.setItem('satXmlHistory', JSON.stringify(savedXmls));
+                updateHistoryUI();
+            }
+        });
+
+        function saveDownloadedXmls(xmls: any[], rfc: string) {
+            xmls.forEach((xmlFile: any) => {
+                try {
+                    const parsed = parser.parse(xmlFile.content);
+                    const comp = parsed.Comprobante;
+                    if (!comp) return;
+
+                    const tfd = comp.Complemento?.TimbreFiscalDigital;
+                    
+                    const historyItem = {
+                        fecha: comp.Fecha,
+                        uuid: tfd?.UUID,
+                        emisorRfc: comp.Emisor?.Rfc,
+                        emisorNombre: comp.Emisor?.Nombre,
+                        receptorRfc: comp.Receptor?.Rfc,
+                        receptorNombre: comp.Receptor?.Nombre,
+                        total: comp.Total,
+                        subtotal: comp.SubTotal,
+                        moneda: comp.Moneda,
+                        version: comp.Version,
+                        tipo: comp.TipoDeComprobante,
+                        esEmisor: comp.Emisor?.Rfc?.toUpperCase() === rfc?.toUpperCase()
+                    };
+
+                    // Evitar duplicados por UUID
+                    if (historyItem.uuid && !savedXmls.some((x: any) => x.uuid === historyItem.uuid)) {
+                        savedXmls.push(historyItem);
+                    }
+                } catch (e) {
+                    console.error('Error al parsear XML:', e);
+                }
+            });
+            localStorage.setItem('satXmlHistory', JSON.stringify(savedXmls));
+            updateHistoryUI();
+        }
+
+        function exportToExcel(tipo: 'emitidas' | 'recibidas') {
+            // Re-mapear para que las columnas salgan bonitas en Excel
+            const worksheetData = savedXmls
+                .filter((xml: any) => {
+                    const isEmitida = xml.esEmisor === true;
+                    return tipo === 'emitidas' ? isEmitida : !isEmitida;
+                })
+                .map((xml: any) => ({
+                    'Fecha': xml.fecha,
+                    'UUID': xml.uuid,
+                    'RFC Emisor': xml.emisorRfc,
+                    'Nombre Emisor': xml.emisorNombre,
+                    'RFC Receptor': xml.receptorRfc,
+                    'Nombre Receptor': xml.receptorNombre,
+                    'Subtotal': Number(xml.subtotal || 0),
+                    'Total': Number(xml.total || 0),
+                    'Moneda': xml.moneda,
+                    'Tipo': xml.tipo,
+                    'Versión': xml.version
+                }));
+
+            if (worksheetData.length === 0) {
+                showModal('Sin Datos', `No hay facturas ${tipo} para exportar.`, 'info');
+                return;
+            }
+
+            const ws = XLSX.utils.json_to_sheet(worksheetData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Facturas");
+            XLSX.writeFile(wb, `Facturas_${tipo}_${new Date().toISOString().split('T')[0]}.xlsx`);
+        }
+
+        exportExcelEmitidos.addEventListener('click', () => exportToExcel('emitidas'));
+        exportExcelRecibidos.addEventListener('click', () => exportToExcel('recibidas'));
 
         async function fileToBase64(file: File): Promise<string> {
             return new Promise((resolve, reject) => {
@@ -668,7 +882,11 @@
                     req.status = 'downloaded';
                     req.xmlCount = downloadData.count;
                     localStorage.setItem('satRequests', JSON.stringify(activeRequests));
-                    showModal('Descarga Exitosa', `Se han descargado ${downloadData.count} XMLs correctamente.`, 'success');
+                    
+                    // Guardar en historial
+                    saveDownloadedXmls(downloadData.xmls, req.rfc);
+                    
+                    showModal('Descarga Exitosa', `Se han descargado y guardado ${downloadData.count} XMLs correctamente.`, 'success');
                 } else {
                     console.warn('Fallo descarga manual:', downloadData.message);
                     showModal('Error de Descarga', downloadData.message, 'error');
@@ -784,7 +1002,7 @@
                     // Restaurar fechas después del reset
                     if (dateStartInput) (dateStartInput as HTMLInputElement).value = localStorage.getItem('satDateStart') || '';
                     if (dateEndInput) (dateEndInput as HTMLInputElement).value = localStorage.getItem('satDateEnd') || '';
-                    showModal('Solicitud Enviada', 'La solicitud se envió con éxito al SAT. Revisaremos el estatus automáticamente cada minuto.', 'success');
+                    showModal('Solicitud Enviada', 'La solicitud se envió con éxito al SAT. Revisaremos el estatus automáticamente cada 30 segundos.', 'success');
                 } else {
                     showModal('Error del SAT', result.message, 'error');
                 }
@@ -846,6 +1064,10 @@
                             req.status = 'downloaded';
                             req.xmlCount = downloadData.count;
                             localStorage.setItem('satRequests', JSON.stringify(activeRequests));
+                            
+                            // Guardar en historial
+                            saveDownloadedXmls(downloadData.xmls, req.rfc);
+                            
                             updateUI();
                         } else {
                             console.warn('Fallo descarga automática:', downloadData.message);
@@ -855,7 +1077,16 @@
                     console.error('Error en polling:', e);
                 }
             }
+            nextCheckTime = Date.now() + 30000;
+            updateUI();
         }, 30000);
+
+        // Actualizar contador visual cada segundo
+        setInterval(() => {
+            if (activeRequests.some((r: any) => r.status === 'pending')) {
+                updateUI();
+            }
+        }, 1000);
 
     </script>
 </body>
