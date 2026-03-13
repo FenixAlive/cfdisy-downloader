@@ -1299,6 +1299,7 @@ import CredentialsFields from '../components/CredentialsFields.astro';
             formData.append('dateEnd', dateEndInput.value);
             formData.append('type', typeInput.value);
             formData.append('rfc', rfc);
+            formData.append('saveCreds', saveCredsCheckbox.checked.toString());
 
             try {
                 const response = await fetch('/api/sat/solicitar', {
@@ -1311,15 +1312,14 @@ import CredentialsFields from '../components/CredentialsFields.astro';
                 if (result.success) {
                     const finalRfc = result.rfc || rfc;
 
-                    if (saveCredsCheckbox.checked) {
-                        const cerB64 = await fileToBase64(cerFile);
-                        const keyB64 = await fileToBase64(keyFile);
+                    // Guardar credenciales si el servidor las devolvió
+                    if (result.saveCredentials && finalRfc) {
                         savedCredentials[finalRfc] = {
-                            cerBase64: cerB64,
-                            keyBase64: keyB64,
-                            password: passwordInput.value,
-                            cerName: cerFile.name,
-                            keyName: keyFile.name
+                            cerBase64: result.saveCredentials.cerBase64,
+                            keyBase64: result.saveCredentials.keyBase64,
+                            password: result.saveCredentials.password,
+                            cerName: result.saveCredentials.cerName,
+                            keyName: result.saveCredentials.keyName
                         };
                         localStorage.setItem('satCredentials', JSON.stringify(savedCredentials));
                         updateSavedRfcDropdown();
@@ -1352,10 +1352,43 @@ import CredentialsFields from '../components/CredentialsFields.astro';
                     if (dateEndInput) dateEndInput.value = localStorage.getItem('satDateEnd') || '';
                     showToast('Solicitud Enviada', 'La solicitud se envió con éxito al SAT. Revisaremos el estatus automáticamente cada 2 minutos.', 'success');
                 } else {
+                    // Guardar credenciales incluso si la solicitud falló
+                    if (result.saveCredentials && result.rfc) {
+                        savedCredentials[result.rfc] = {
+                            cerBase64: result.saveCredentials.cerBase64,
+                            keyBase64: result.saveCredentials.keyBase64,
+                            password: result.saveCredentials.password,
+                            cerName: result.saveCredentials.cerName,
+                            keyName: result.saveCredentials.keyName
+                        };
+                        localStorage.setItem('satCredentials', JSON.stringify(savedCredentials));
+                        updateSavedRfcDropdown();
+                        console.log('Credenciales guardadas localmente para ' + result.rfc);
+                    }
                     showModal('Error del SAT', result.message, 'error');
                 }
             } catch (err) {
                 console.error(err);
+                
+                // Intentar extraer credenciales de la respuesta de error
+                try {
+                    const errorResponse = await err.json?.();
+                    if (errorResponse?.saveCredentials && errorResponse?.rfc) {
+                        savedCredentials[errorResponse.rfc] = {
+                            cerBase64: errorResponse.saveCredentials.cerBase64,
+                            keyBase64: errorResponse.saveCredentials.keyBase64,
+                            password: errorResponse.saveCredentials.password,
+                            cerName: errorResponse.saveCredentials.cerName,
+                            keyName: errorResponse.saveCredentials.keyName
+                        };
+                        localStorage.setItem('satCredentials', JSON.stringify(savedCredentials));
+                        updateSavedRfcDropdown();
+                        console.log('Credenciales guardadas localmente para ' + errorResponse.rfc);
+                    }
+                } catch (parseError) {
+                    // No se pudo parsear la respuesta de error
+                }
+                
                 showModal('Error de Conexión', 'Ocurrió un error al conectar con el servidor local.', 'error');
             } finally {
                 submitBtn.disabled = false;

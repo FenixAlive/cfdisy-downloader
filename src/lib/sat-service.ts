@@ -100,7 +100,7 @@ export class SATService {
             if (/^[0-9a-fA-F]+$/.test(certSerial)) {
                 try {
                     const hex = certSerial.length % 2 !== 0 ? '0' + certSerial : certSerial;
-                    const bytes = forge.util.hexToBytes(hex);
+                    const bytes = Buffer.from(hex, 'hex').toString('utf8');
                     // Si el resultado parece una cadena de dígitos, lo usamos
                     if (/^[0-9]+$/.test(bytes)) {
                         certSerial = bytes;
@@ -113,7 +113,7 @@ export class SATService {
             certSerial = certSerial.replace(/^0+/g, '');
             console.log('SATService: Serial detectado:', certSerial);
             
-            const certBase64 = forge.util.encode64(cerBinary);
+            const certBase64 = Buffer.from(cerBinary, 'binary').toString('base64');
             const privateKeyPem = forge.pki.privateKeyToPem(privateKey);
             
             // Re-procesar el issuer. Mapear OIDs comunes del SAT que forge no conoce
@@ -215,7 +215,7 @@ export class SATService {
     private static manualSign(toDigest: string, creds: any, uri: string = ''): string {
         const hash = forge.md.sha1.create();
         hash.update(toDigest, 'utf8');
-        const digestValue = forge.util.encode64(hash.digest().getBytes());
+        const digestValue = Buffer.from(hash.digest().getBytes(), 'binary').toString('base64');
 
         const signedInfoWithNamespace = this.nospaces(`
             <SignedInfo xmlns="http://www.w3.org/2000/09/xmldsig#">
@@ -234,7 +234,7 @@ export class SATService {
         const privKey = forge.pki.privateKeyFromPem(creds.privateKeyPem);
         const md = forge.md.sha1.create();
         md.update(signedInfoWithNamespace, 'utf8');
-        const signatureValue = forge.util.encode64(privKey.sign(md));
+        const signatureValue = Buffer.from(privKey.sign(md), 'binary').toString('base64');
 
         const certificate = creds.certBase64.replace(/\r?\n/g, '');
         const keyInfo = `<KeyInfo><X509Data><X509IssuerSerial><X509IssuerName>${creds.certIssuer}</X509IssuerName><X509SerialNumber>${creds.certSerial}</X509SerialNumber></X509IssuerSerial><X509Certificate>${certificate}</X509Certificate></X509Data></KeyInfo>`;
