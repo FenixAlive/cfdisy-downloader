@@ -1300,6 +1300,13 @@ import CredentialsFields from '../components/CredentialsFields.astro';
             formData.append('type', typeInput.value);
             formData.append('rfc', rfc);
             formData.append('saveCreds', saveCredsCheckbox.checked.toString());
+            
+            console.log('Enviando formulario:', {
+                saveCreds: saveCredsCheckbox.checked,
+                hasCer: !!cerFile,
+                hasKey: !!keyFile,
+                rfc: rfc
+            });
 
             try {
                 const response = await fetch('/api/sat/solicitar', {
@@ -1308,8 +1315,15 @@ import CredentialsFields from '../components/CredentialsFields.astro';
                 });
 
                 const result = await response.json();
+            
+            console.log('Respuesta del servidor:', {
+                success: result.success,
+                hasSaveCredentials: !!result.saveCredentials,
+                rfc: result.rfc,
+                message: result.message
+            });
 
-                if (result.success) {
+            if (result.success) {
                     const finalRfc = result.rfc || rfc;
 
                     // Guardar credenciales si el servidor las devolvió

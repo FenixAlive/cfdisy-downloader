@@ -1,4 +1,4 @@
-import { SATService } from '../../../lib/sat-service';
+import { SATService } from '../../../lib/sat-service-simple';
 import JSZip from 'jszip';
 
 export const POST = async ({ request }: { request: Request }) => {
@@ -15,10 +15,10 @@ export const POST = async ({ request }: { request: Request }) => {
         }
 
         const creds = await SATService.parseCredentials(cerBase64, keyBase64, password);
-        const token = await SATService.getAccessToken(creds);
-        const base64Zip = await SATService.descargarPaquete(creds, token, packageId);
+        const token = await SATService.authenticate(creds);
+        const result = await SATService.descargarPaquete(creds, token, packageId);
 
-        if (!base64Zip) throw new Error('El SAT no devolvió el contenido del paquete (puede estar aún procesándose internamente).');
+        if (!result.xmls || result.xmls.length === 0) throw new Error('El SAT no devolvió el contenido del paquete (puede estar aún procesándose internamente).');
 
         const zipBuffer = Buffer.from(base64Zip, 'base64');
         const zip = await JSZip.loadAsync(zipBuffer);
@@ -33,8 +33,8 @@ export const POST = async ({ request }: { request: Request }) => {
 
         return new Response(JSON.stringify({ 
             success: true, 
-            count: xmls.length,
-            xmls: xmls 
+            count: result.xmls.length,
+            xmls: result.xmls 
         }));
     } catch (error: any) {
         console.error('Error en API Descargar:', error);

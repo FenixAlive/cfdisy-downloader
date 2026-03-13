@@ -1,4 +1,4 @@
-import { SATService } from '../../../lib/sat-service';
+import { SATService } from '../../../lib/sat-service-simple';
 
 export const POST = async ({ request }: { request: Request }) => {
     try {
@@ -18,6 +18,7 @@ export const POST = async ({ request }: { request: Request }) => {
         const dateEnd = data.get('dateEnd') as string;
         const type = data.get('type') as 'emitidas' | 'recibidas';
         const rfcManual = data.get('rfc') as string;
+        const saveCreds = data.get('saveCreds') === 'true';
 
         const cerBuffer = Buffer.from(await cer.arrayBuffer());
         const keyBuffer = Buffer.from(await key.arrayBuffer());
@@ -27,20 +28,27 @@ export const POST = async ({ request }: { request: Request }) => {
         (global as any).lastSatCreds = creds; // Persistir para esta sesión local
         
         // 2. Obtener Token
-        const token = await SATService.getAccessToken(creds);
+        const token = await SATService.authenticate(creds);
 
         // 3. Solicitar Descarga
-        const requestId = await SATService.solicitarDescarga(creds, token, {
-            start: dateStart,
-            end: dateEnd,
+        const result = await SATService.solicitarDescarga(creds, token, {
+            dateStart: dateStart,
+            dateEnd: dateEnd,
             type: type,
-            rfcSolicitante: rfcManual || creds.rfc
+            rfc: rfcManual || creds.rfc
         });
 
         return new Response(JSON.stringify({ 
             success: true, 
-            requestId,
-            rfc: rfcManual || creds.rfc 
+            requestId: result.idSolicitud,
+            rfc: rfcManual || creds.rfc,
+            saveCredentials: saveCreds ? {
+                cerBase64: `data:application/x-x509-ca-cert;base64,${cerBuffer.toString('base64')}`,
+                keyBase64: `data:application/pkcs8;base64,${keyBuffer.toString('base64')}`,
+                password: password,
+                cerName: cer.name,
+                keyName: key.name
+            } : null
         }));
     } catch (error: any) {
         console.error(error);

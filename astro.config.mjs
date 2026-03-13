@@ -3,5 +3,13 @@ import cloudflare from '@astrojs/cloudflare';
 
 export default defineConfig({
   output: 'server',
-  adapter: cloudflare(),
+  adapter: cloudflare({
+    mode: 'directory',
+    functionPerRoute: false,
+  }),
+  vite: {
+    define: {
+      global: 'globalThis',
+    },
+  },
 });

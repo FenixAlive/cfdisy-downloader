@@ -7,6 +7,12 @@ dist/
 .vercel/
 .netlify/
 
+# Wrangler / Cloudflare
+.wrangler/
+.wrangler.toml.backup
+wrangler.toml.backup
+*.wrangler
+
 # environment
 .env
 .env.production
@@ -16,6 +22,7 @@ dist/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+wrangler.log
 
 # OS
 .DS_Store
@@ -24,3 +31,9 @@ Thumbs.db
 # temp
 /tmp/
 *.tmp
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo

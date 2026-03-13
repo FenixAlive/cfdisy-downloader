@@ -1,4 +1,4 @@
-import { SATService } from '../../../lib/sat-service';
+import { SATService } from '../../../lib/sat-service-simple';
 
 export const POST = async ({ request }: { request: Request }) => {
     const url = new URL(request.url);
@@ -29,11 +29,11 @@ export const POST = async ({ request }: { request: Request }) => {
             throw new Error('Credenciales no encontradas en sesión local y no proporcionadas en la solicitud. Reintente la solicitud.');
         }
 
-        const token = await SATService.getAccessToken(creds);
+        const token = await SATService.authenticate(creds);
         const status = await SATService.verificarSolicitud(creds, token, id);
 
-        const isReady = (status.estado == '3' || status.estado == '1') && status.paqueteId;
-        const isEmpty = status.estado == '3' && (status.codigoEstadoSolicitud == '5004' || status.numeroCfdis === 0);
+        const isReady = (status.estado == '3' || status.estado == 'ready') && status.paqueteId;
+        const isEmpty = status.estado == '3' && status.codigo == '5004';
         
         let finalStatus = 'pending';
         if (isReady) finalStatus = 'ready';
