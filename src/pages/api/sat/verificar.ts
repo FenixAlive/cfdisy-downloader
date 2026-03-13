@@ -32,13 +32,20 @@ export const POST = async ({ request }: { request: Request }) => {
         const token = await SATService.getAccessToken(creds);
         const status = await SATService.verificarSolicitud(creds, token, id);
 
+        const isReady = (status.estado == '3' || status.estado == '1') && status.paqueteId;
+        const isEmpty = status.estado == '3' && (status.codigoEstadoSolicitud == '5004' || status.numeroCfdis === 0);
+        
+        let finalStatus = 'pending';
+        if (isReady) finalStatus = 'ready';
+        else if (isEmpty) finalStatus = 'empty';
+
         return new Response(JSON.stringify({ 
             success: true, 
-            status: status.estado === '3' ? 'ready' : 'pending', // 3 = Terminado
-            packageId: status.paqueteId 
+            status: finalStatus,
+            packageId: status.paqueteId,
+            message: isEmpty ? 'No se encontraron comprobantes para este periodo.' : undefined
         }));
     } catch (error: any) {
         return new Response(JSON.stringify({ success: false, message: error.message }), { status: 500 });
     }
 };
-

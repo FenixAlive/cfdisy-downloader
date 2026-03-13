@@ -1,0 +1,24 @@
+---
+// src/components/StatusTable.astro
+---
+
+<div class="status-container" id="statusContainer">
+    <h2>Solicitudes en Curso</h2>
+    <div class="table-responsive">
+        <table class="xml-table" id="requestsTable" style="width:100%;">
+            <thead>
+                <tr>
+                    <th style="width:14%;">RFC</th>
+                    <th style="width:12%;">Solicitud</th>
+                    <th style="width:24%;">Rango</th>
+                    <th style="width:10%;">Tipo</th>
+                    <th style="width:18%;">Estado</th>
+                    <th style="width:22%;">Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="downloadList">
+                <!-- Solicitudes se añadirán aquí como filas -->
+            </tbody>
+        </table>
+    </div>
+</div>

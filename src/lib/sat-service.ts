@@ -327,10 +327,17 @@ export class SATService {
         });
 
         const estadoMatch = response.data.match(/EstadoSolicitud="(.*?)"/);
-        const paqueteMatch = response.data.match(/IdsPaquetes>(.*?)<\/IdsPaquetes/);
+        const codEstatusMatch = response.data.match(/CodEstatus="(.*?)"/);
+        const codEstSolMatch = response.data.match(/CodigoEstadoSolicitud="(.*?)"/);
+        const numCfdisMatch = response.data.match(/NumeroCFDIs="(.*?)"/);
+        const paqueteMatch = response.data.match(/IdsPaquetes>.*?([^<]+).*?<\/IdsPaquetes/); 
+        
         return {
             estado: estadoMatch ? estadoMatch[1] : '?',
-            paqueteId: paqueteMatch ? paqueteMatch[1] : null
+            codEstatus: codEstatusMatch ? codEstatusMatch[1] : '?',
+            codigoEstadoSolicitud: codEstSolMatch ? codEstSolMatch[1] : '?',
+            numeroCfdis: numCfdisMatch ? parseInt(numCfdisMatch[1], 10) : 0,
+            paqueteId: paqueteMatch ? paqueteMatch[1].trim() : null
         };
     }
 

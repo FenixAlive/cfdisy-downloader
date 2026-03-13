@@ -1,0 +1,47 @@
+---
+// src/components/HistoryTable.astro
+---
+
+<div class="card" id="historyCard" style="margin-top: 2.5rem; display: none;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <h2>Facturas Descargadas</h2>
+        <div style="display: flex; gap: 0.5rem;">
+            <button id="exportExcelEmitidos" class="btn" style="background: var(--success); margin: 0; padding: 0.5rem 1rem; font-size: 0.8rem;">
+                <span>Exportar Excel (Emitidos)</span>
+            </button>
+            <button id="exportExcelRecibidos" class="btn" style="background: var(--success); margin: 0; padding: 0.5rem 1rem; font-size: 0.8rem;">
+                <span>Exportar Excel (Recibidos)</span>
+            </button>
+            <button id="deleteAllXmls" class="btn" style="background: var(--accent); margin: 0; padding: 0.5rem 1rem; font-size: 0.8rem;">
+                <span>Borrar Todo</span>
+            </button>
+        </div>
+    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+        <div style="flex: 1; min-width: 250px;">
+            <label for="searchInput" style="font-size: 0.8rem; font-weight: 600; color: var(--text-dim); margin-bottom: 0.25rem; display: block;">Búsqueda Avanzada (| para OR, & para AND)</label>
+            <input type="text" id="searchInput" placeholder="Ej: Ingreso | Nómina" style="padding: 0.5rem 0.75rem; font-size: 0.85rem;" />
+        </div>
+        <div style="flex: 1; min-width: 250px;">
+            <label for="rfcSearchInput" style="font-size: 0.8rem; font-weight: 600; color: var(--text-dim); margin-bottom: 0.25rem; display: block;">Filtrar por RFC Emisor/Receptor</label>
+            <input type="text" id="rfcSearchInput" placeholder="Busca un RFC específico..." style="padding: 0.5rem 0.75rem; font-size: 0.85rem;" />
+        </div>
+    </div>
+    
+    <div class="table-responsive">
+        <table class="xml-table" id="xmlTable">
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>RFC Emisor</th>
+                    <th>RFC Receptor</th>
+                    <th>UUID</th>
+                    <th>Total</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="xmlTableBody">
+                <!-- XMLs guardados aquí -->
+            </tbody>
+        </table>
+    </div>
+</div>

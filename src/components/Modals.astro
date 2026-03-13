@@ -1,0 +1,33 @@
+---
+// src/components/Modals.astro
+import CredentialsFields from './CredentialsFields.astro';
+---
+
+<!-- Modal Template -->
+<div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+        <div class="modal-icon" id="modalIcon">🔔</div>
+        <div class="modal-title" id="modalTitle">Atención</div>
+        <div class="modal-message" id="modalMessage">Mensaje informativo.</div>
+        <div style="display:flex; gap:0.5rem; justify-content:center; margin-top:1rem;">
+            <button class="modal-btn" id="modalConfirm" style="display:none; background: var(--success);">Confirmar</button>
+            <button class="modal-btn" id="modalCancel" style="display:none; background: rgba(244, 63, 94, 0.06); color: var(--accent);">Cancelar</button>
+            <button class="modal-btn" id="modalClose">Entendido</button>
+        </div>
+    </div>
+</div>
+
+<!-- Credenciales Modal Template -->
+<div class="modal-overlay" id="credsModalOverlay" style="display:none;">
+    <div class="modal">
+        <div class="modal-icon">🔒</div>
+        <div class="modal-title">Ingresar Credenciales</div>
+        <div class="modal-message" id="credsModalMessage">
+            <CredentialsFields prefix="modal-" />
+        </div>
+        <div style="display:flex; gap:0.5rem; justify-content:center; margin-top:1rem;">
+            <button class="modal-btn" id="credsModalConfirm">Usar Credenciales</button>
+            <button class="modal-btn" id="credsModalCancel" style="background: rgba(244, 63, 94, 0.06); color: var(--accent);">Cancelar</button>
+        </div>
+    </div>
+</div>

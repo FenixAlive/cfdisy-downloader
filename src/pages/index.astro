@@ -1,4 +1,5 @@
 ---
+import CredentialsFields from '../components/CredentialsFields.astro';
 // src/pages/index.astro
 ---
 
@@ -26,7 +27,7 @@
         }
 
         /* Page internal push (toasts) */
-        .page-push-container {
+        :global(.page-push-container) {
             position: fixed;
             top: 1rem;
             left: 0;
@@ -37,36 +38,50 @@
             z-index: 1100;
         }
 
-        .page-push {
+        :global(.page-push) {
             pointer-events: auto;
             min-width: 280px;
             max-width: 880px;
             margin: 0 1rem;
-            background: rgba(15,23,42,0.95);
-            color: var(--text);
-            border: 1px solid var(--border);
+            background: #1e293b; /* slate-800 - better contrast */
+            color: #f8fafc; /* slate-50 - light text */
+            border: 1px solid rgba(255, 255, 255, 0.1);
             padding: 0.75rem 1rem;
             border-radius: 0.75rem;
-            box-shadow: 0 10px 30px rgba(2,6,23,0.6);
+            box-shadow: 0 8px 20px rgba(2,6,23,0.25);
             display: flex;
             gap: 0.75rem;
             align-items: center;
-            transform: translateY(-10px);
+            transform: translateY(-6px);
             opacity: 0;
             transition: transform 0.25s, opacity 0.25s;
         }
 
-        .page-push.show {
+        :global(.page-push.show) {
             transform: translateY(0);
             opacity: 1;
         }
 
-        .page-push .push-title { font-weight: 700; }
-        .page-push .push-body { color: var(--text-dim); font-size: 0.95rem; }
+        :global(.page-push .push-title) { font-weight: 700; }
+        :global(.page-push .push-body) { color: inherit; font-size: 0.95rem; opacity: 0.95; }
+        :global(.page-push .push-close) { margin-left: 8px; opacity: 0.95; cursor: pointer; font-weight: 700; }
 
-        .page-push.info { border-left: 4px solid #60a5fa; }
-        .page-push.success { border-left: 4px solid #10b981; }
-        .page-push.error { border-left: 4px solid #f43f5e; }
+        /* Backgrounds per type (solid, high contrast) - higher specificity */
+        :global(.page-push.info) { 
+            background: #fef3c7 !important; 
+            color: #78350f !important; 
+            border-left: 4px solid #f59e0b; 
+        }
+        :global(.page-push.success) { 
+            background: #065f46 !important; 
+            color: #ecfdf5 !important; 
+            border-left: 4px solid #10b981; 
+        }
+        :global(.page-push.error) { 
+            background: #7f1d1d !important; 
+            color: #fef2f2 !important; 
+            border-left: 4px solid #f43f5e; 
+        }
 
         body {
             font-family: 'Outfit', sans-serif;
@@ -154,6 +169,63 @@
             color: white;
             font-family: inherit;
             transition: all 0.2s;
+        }
+
+        #savedRfc,
+        #presetYear,
+        #presetMonth,
+        #type {
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid var(--border);
+            border-radius: 0.75rem;
+            padding: 0.75rem 1rem;
+            color: white;
+            font-family: inherit;
+            transition: all 0.2s;
+            width: 100%;
+        }
+
+        #savedRfc option,
+        #presetYear option,
+        #presetMonth option,
+        #type option {
+            background: rgba(15, 23, 42, 0.95);
+            color: white;
+            border: none;
+            padding: 0.5rem;
+        }
+
+        #savedRfc:focus,
+        #presetYear:focus,
+        #presetMonth:focus,
+        #type:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+        }
+
+        /* Mejorar visibilidad del icono calendario en inputs date */
+        input[type="date"] {
+            color: var(--text);
+            background: rgba(15, 23, 42, 0.5);
+            padding-right: 1.8rem; /* dejar más espacio para el icono agrandado */
+        }
+
+        input[type="date"]::-webkit-datetime-edit { color: var(--text); }
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(1) brightness(1.2) contrast(1.2);
+            opacity: 0.98;
+            cursor: pointer;
+            transform: scale(1.45);
+            width: 1.3em;
+            height: 1.3em;
+            vertical-align: middle;
+        }
+        /* IE/Edge fallback visibility tweaks */
+        input[type="date"]::-ms-clear, input[type="date"]::-ms-expand {
+            display: block;
+            color: var(--text);
+            transform: scale(1.2);
         }
 
         input:focus {
@@ -364,6 +436,35 @@
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
+
+        /* Mobile tweaks */
+        @media (max-width: 640px) {
+            .container {
+                width: 96%;
+                padding: 1rem;
+                margin: 1rem auto;
+            }
+
+            .card {
+                padding: 1rem;
+                border-radius: 1rem;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+
+            .form-group.full-width {
+                flex-direction: column;
+            }
+
+            header h1 { font-size: 2rem; }
+
+            .xml-table th, .xml-table td { padding: 0.6rem; font-size: 0.8rem; }
+
+            .download-item { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+        }
     </style>
 </head>
 <body>
@@ -383,20 +484,7 @@
                             <option value="">-- Seleccionar RFC Guardado --</option>
                         </select>
                     </div>
-                    <div class="form-group">
-                        <label for="cerFile">Certificado (.cer)</label>
-                        <input type="file" id="cerFile" accept=".cer" required />
-                        <span id="cerInfo" style="font-size: 0.8rem; color: #666; margin-top: 2px; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></span>
-                    </div>
-                    <div class="form-group">
-                        <label for="keyFile">Llave Privada (.key)</label>
-                        <input type="file" id="keyFile" accept=".key" required />
-                        <span id="keyInfo" style="font-size: 0.8rem; color: #666; margin-top: 2px; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></span>
-                    </div>
-                    <div class="form-group full-width">
-                        <label for="password">Contraseña e.firma</label>
-                        <input type="password" id="password" placeholder="Tu contraseña" required />
-                    </div>
+                    <CredentialsFields prefix="" />
                     <div class="form-group full-width" style="border-top: 1px solid var(--border); padding-top: 1rem;">
                         <label>Relleno rápido por período</label>
                         <div style="display: flex; gap: 0.5rem;">
@@ -435,15 +523,7 @@
                             <option value="recibidas">Recibidas</option>
                         </select>
                     </div>
-                    <div class="form-group">
-                        <label for="rfc">RFC (Opcional si viene en el .cer)</label>
-                        <input type="text" id="rfc" placeholder="ABCD123456..."/>
-                    </div>
-                    
-                    <div class="form-group full-width" style="flex-direction: row; align-items: center; gap: 0.5rem; margin-top: 0.5rem;">
-                        <input type="checkbox" id="saveCreds" style="width: auto;" />
-                        <label for="saveCreds" style="margin: 0; cursor: pointer;">Guardar credenciales en este navegador</label>
-                    </div>
+                    <!-- RFC and save checkbox are included inside CredentialsFields -->
                     
                     <button type="submit" class="btn full-width" id="submitBtn">
                         <span>Iniciar Solicitud de Descarga</span>
@@ -523,38 +603,53 @@
         </div>
     </div>
 
-    <script>
-        import JSZip from 'jszip';
-        import { XMLParser } from 'fast-xml-parser';
-        import * as XLSX from 'xlsx';
+    <!-- Credenciales Modal Template -->
+    <div class="modal-overlay" id="credsModalOverlay" style="display:none;">
+        <div class="modal">
+            <div class="modal-icon">🔒</div>
+            <div class="modal-title">Ingresar Credenciales</div>
+            <div class="modal-message" id="credsModalMessage">
+                <CredentialsFields prefix="modal-" />
+            </div>
+            <div style="display:flex; gap:0.5rem; justify-content:center; margin-top:1rem;">
+                <button class="modal-btn" id="credsModalConfirm">Usar Credenciales</button>
+                <button class="modal-btn" id="credsModalCancel" style="background: rgba(244, 63, 94, 0.06); color: var(--accent);">Cancelar</button>
+            </div>
+        </div>
+    </div>
 
+    <script is:inline src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script is:inline src="https://cdnjs.cloudflare.com/ajax/libs/fast-xml-parser/4.3.6/fxparser.min.js"></script>
+    <script is:inline src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <script is:inline>
         const parser = new XMLParser({
             ignoreAttributes: false,
             attributeNamePrefix: '',
             removeNSPrefix: true
         });
 
-        const form = document.getElementById('downloadForm') as HTMLFormElement;
-        const submitBtn = document.getElementById('submitBtn') as HTMLButtonElement;
-        const statusContainer = document.getElementById('statusContainer') as HTMLElement;
-        const downloadList = document.getElementById('downloadList') as HTMLElement;
-        const dateStartInput = document.getElementById('dateStart') as HTMLInputElement;
-        const dateEndInput = document.getElementById('dateEnd') as HTMLInputElement;
-        const cerInput = document.getElementById('cerFile') as HTMLInputElement;
-        const keyInput = document.getElementById('keyFile') as HTMLInputElement;
-        const passwordInput = document.getElementById('password') as HTMLInputElement;
-        const rfcInput = document.getElementById('rfc') as HTMLInputElement;
-        const typeInput = document.getElementById('type') as HTMLSelectElement;
-        const saveCredsCheckbox = document.getElementById('saveCreds') as HTMLInputElement;
-        const savedRfcSelect = document.getElementById('savedRfc') as HTMLSelectElement;
-        const presetYear = document.getElementById('presetYear') as HTMLSelectElement;
-        const presetMonth = document.getElementById('presetMonth') as HTMLSelectElement;
+        const form = document.getElementById('downloadForm');
+        const submitBtn = document.getElementById('submitBtn');
+        const statusContainer = document.getElementById('statusContainer');
+        const downloadList = document.getElementById('downloadList');
+        const dateStartInput = document.getElementById('dateStart');
+        const dateEndInput = document.getElementById('dateEnd');
+        const cerInput = document.getElementById('cerFile');
+        const keyInput = document.getElementById('keyFile');
+        const passwordInput = document.getElementById('password');
+        const rfcInput = document.getElementById('rfc');
+        const typeInput = document.getElementById('type');
+        const saveCredsCheckbox = document.getElementById('saveCreds');
+        const savedRfcSelect = document.getElementById('savedRfc');
+        const presetYear = document.getElementById('presetYear');
+        const presetMonth = document.getElementById('presetMonth');
 
-        const historyCard = document.getElementById('historyCard') as HTMLElement;
-        const xmlTableBody = document.getElementById('xmlTableBody') as HTMLElement;
-        const exportExcelEmitidos = document.getElementById('exportExcelEmitidos') as HTMLButtonElement;
-        const exportExcelRecibidos = document.getElementById('exportExcelRecibidos') as HTMLButtonElement;
-        const deleteAllXmls = document.getElementById('deleteAllXmls') as HTMLButtonElement;
+        const historyCard = document.getElementById('historyCard');
+        const xmlTableBody = document.getElementById('xmlTableBody');
+        const exportExcelEmitidos = document.getElementById('exportExcelEmitidos');
+        const exportExcelRecibidos = document.getElementById('exportExcelRecibidos');
+        const deleteAllXmls = document.getElementById('deleteAllXmls');
 
         let savedXmls = JSON.parse(localStorage.getItem('satXmlHistory') || '[]');
 
@@ -576,35 +671,33 @@
                 const firstDay = new Date(y, m, 1);
                 const lastDay = new Date(y, m + 1, 0);
                 
-                // Formato ISO para el input date: YYYY-MM-DD
-                const formatDate = (date: Date) => {
+                const formatDate = (date) => {
                     const d = date.getDate().toString().padStart(2, '0');
                     const mo = (date.getMonth() + 1).toString().padStart(2, '0');
                     const ye = date.getFullYear();
                     return `${ye}-${mo}-${d}`;
                 };
                 
-                (dateStartInput as HTMLInputElement).value = formatDate(firstDay);
-                (dateEndInput as HTMLInputElement).value = formatDate(lastDay);
+                dateStartInput.value = formatDate(firstDay);
+                dateEndInput.value = formatDate(lastDay);
                 
-                // Guardar en localStorage
-                localStorage.setItem('satDateStart', (dateStartInput as HTMLInputElement).value);
-                localStorage.setItem('satDateEnd', (dateEndInput as HTMLInputElement).value);
+                localStorage.setItem('satDateStart', dateStartInput.value);
+                localStorage.setItem('satDateEnd', dateEndInput.value);
             }
         }
 
         presetYear.addEventListener('change', updateDatesFromPreset);
         presetMonth.addEventListener('change', updateDatesFromPreset);
 
-        const modalOverlay = document.getElementById('modalOverlay') as HTMLElement;
-        const modalIcon = document.getElementById('modalIcon') as HTMLElement;
-        const modalTitle = document.getElementById('modalTitle') as HTMLElement;
-        const modalMessage = document.getElementById('modalMessage') as HTMLElement;
-        const modalClose = document.getElementById('modalClose') as HTMLButtonElement;
-        const modalConfirm = document.getElementById('modalConfirm') as HTMLButtonElement;
-        const modalCancel = document.getElementById('modalCancel') as HTMLButtonElement;
+        const modalOverlay = document.getElementById('modalOverlay');
+        const modalIcon = document.getElementById('modalIcon');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalMessage = document.getElementById('modalMessage');
+        const modalClose = document.getElementById('modalClose');
+        const modalConfirm = document.getElementById('modalConfirm');
+        const modalCancel = document.getElementById('modalCancel');
 
-        function showModal(title: string, message: string, type: 'info' | 'success' | 'error' = 'info') {
+        function showModal(title, message, type = 'info') {
             modalTitle.textContent = title;
             modalMessage.textContent = message;
             
@@ -612,7 +705,6 @@
             else if (type === 'error') modalIcon.textContent = '❌';
             else modalIcon.textContent = '🔔';
             
-            // Configure buttons: only the simple close is visible for informational dialogs
             modalClose.style.display = 'inline-block';
             if (modalConfirm) modalConfirm.style.display = 'none';
             if (modalCancel) modalCancel.style.display = 'none';
@@ -623,13 +715,12 @@
             modalOverlay.classList.remove('active');
         });
 
-        function showConfirm(title: string, message: string) {
-            return new Promise<boolean>((resolve) => {
+        function showConfirm(title, message) {
+            return new Promise((resolve) => {
                 modalTitle.textContent = title;
                 modalMessage.textContent = message;
                 modalIcon.textContent = '❗';
 
-                // Show confirm/cancel, hide plain close
                 modalClose.style.display = 'none';
                 if (modalConfirm) modalConfirm.style.display = 'inline-block';
                 if (modalCancel) modalCancel.style.display = 'inline-block';
@@ -647,22 +738,23 @@
             });
         }
 
-        function showToast(title: string, message: string, type: 'info' | 'success' | 'error' = 'info', timeout = 5000) {
+        function showToast(title, message, type = 'info', timeout = 5000) {
             const container = document.getElementById('pagePushContainer');
             if (!container) { showModal(title, message, type); return; }
 
             const push = document.createElement('div');
             push.className = `page-push ${type}`;
-            push.innerHTML = `<div style="flex:1"><div class="push-title">${title}</div><div class="push-body">${message}</div></div><div style="margin-left:8px; opacity:0.8; cursor:pointer;">✕</div>`;
+            push.setAttribute('role', 'status');
+            push.setAttribute('aria-live', 'polite');
+            push.innerHTML = `<div style="flex:1"><div class="push-title">${title}</div><div class="push-body">${message}</div></div><div class="push-close" aria-label="Cerrar">✕</div>`;
 
-            const closeBtn = push.querySelector('div:last-child') as HTMLElement;
-            closeBtn.addEventListener('click', () => {
+            const closeBtn = push.querySelector('.push-close');
+            if (closeBtn) closeBtn.addEventListener('click', () => {
                 push.classList.remove('show');
                 setTimeout(() => push.remove(), 300);
             });
 
             container.appendChild(push);
-            // allow layout
             requestAnimationFrame(() => push.classList.add('show'));
 
             const hide = () => {
@@ -675,8 +767,7 @@
             push.addEventListener('mouseleave', () => setTimeout(hide, 2000));
         }
 
-        function maybeNotify(title: string, message: string, type: 'info' | 'success' | 'error' = 'info') {
-            // Use internal page push for non-error notifications
+        function maybeNotify(title, message, type = 'info') {
             if (type === 'error') {
                 showModal(title, message, type);
             } else {
@@ -684,18 +775,18 @@
             }
         }
 
-        // Estructura de credenciales guardadas...
+        // Estructura de credenciales guardadas
         let savedCredentials = JSON.parse(localStorage.getItem('satCredentials') || '{}');
-        let selectedSavedCreds: any = null;
+        let selectedSavedCreds = null;
 
         function updateSavedRfcDropdown() {
             const rfcs = Object.keys(savedCredentials);
             if (rfcs.length > 0) {
-                savedRfcSelect.parentElement!.style.display = 'flex';
+                savedRfcSelect.parentElement.style.display = 'flex';
                 savedRfcSelect.innerHTML = '<option value="">-- Seleccionar RFC Guardado --</option>' + 
                     rfcs.map(rfc => `<option value="${rfc}">${rfc}</option>`).join('');
             } else {
-                savedRfcSelect.parentElement!.style.display = 'none';
+                savedRfcSelect.parentElement.style.display = 'none';
             }
         }
 
@@ -723,11 +814,9 @@
                 passwordInput.value = creds.password;
                 selectedSavedCreds = creds;
                 
-                // Quitar requerimiento de archivos ya que usamos los guardados
                 cerInput.required = false;
                 keyInput.required = false;
                 
-                // Mostrar feedback visual
                 if (cerInfo) cerInfo.textContent = `📁 Guardado: ${creds.cerName}`;
                 if (keyInfo) keyInfo.textContent = `📁 Guardado: ${creds.keyName}`;
                 
@@ -747,20 +836,20 @@
         // Cargar fechas previas
         const savedStart = localStorage.getItem('satDateStart');
         const savedEnd = localStorage.getItem('satDateEnd');
-        if (savedStart && dateStartInput) (dateStartInput as HTMLInputElement).value = savedStart;
-        if (savedEnd && dateEndInput) (dateEndInput as HTMLInputElement).value = savedEnd;
+        if (savedStart && dateStartInput) dateStartInput.value = savedStart;
+        if (savedEnd && dateEndInput) dateEndInput.value = savedEnd;
 
         // Guardar fechas al cambiar
-        dateStartInput.addEventListener('change', () => localStorage.setItem('satDateStart', (dateStartInput as HTMLInputElement).value));
-        dateEndInput.addEventListener('change', () => localStorage.setItem('satDateEnd', (dateEndInput as HTMLInputElement).value));
+        dateStartInput.addEventListener('change', () => localStorage.setItem('satDateStart', dateStartInput.value));
+        dateEndInput.addEventListener('change', () => localStorage.setItem('satDateEnd', dateEndInput.value));
 
-        let nextCheckTime = Date.now() + 30000;
+        let nextCheckTime = Date.now() + 120000;
 
         function updateUI() {
             if (!statusContainer || !downloadList) return;
             if (activeRequests.length > 0) {
                 statusContainer.style.display = 'block';
-                downloadList.innerHTML = activeRequests.map((req: any, index: number) => {
+                downloadList.innerHTML = activeRequests.map((req, index) => {
                     let statusLabel = 'Pendiente';
                     if (req.status === 'pending') {
                         const diff = Math.max(0, Math.ceil((nextCheckTime - Date.now()) / 1000));
@@ -807,11 +896,11 @@
                 // Agregar listeners a los nuevos botones
                 document.querySelectorAll('.btn-download').forEach(btn => {
                     btn.addEventListener('click', async (e) => {
-                        const id = (e.target as HTMLElement).getAttribute('data-id');
-                        const request = activeRequests.find((r: any) => r.id === id);
+                        const id = e.target.getAttribute('data-id');
+                        const request = activeRequests.find(r => r.id === id);
                         if (request) {
-                            (e.target as HTMLButtonElement).disabled = true;
-                            (e.target as HTMLButtonElement).textContent = 'Procesando...';
+                            e.target.disabled = true;
+                            e.target.textContent = 'Procesando...';
                             await processDownload(request);
                             updateUI();
                         }
@@ -820,7 +909,7 @@
 
                 document.querySelectorAll('.btn-delete').forEach(btn => {
                     btn.addEventListener('click', (e) => {
-                        const index = parseInt((e.target as HTMLElement).getAttribute('data-index')!);
+                        const index = parseInt(e.target.getAttribute('data-index'));
                         activeRequests.splice(index, 1);
                         localStorage.setItem('satRequests', JSON.stringify(activeRequests));
                         updateUI();
@@ -829,9 +918,9 @@
 
                 document.querySelectorAll('.btn-verify-now').forEach(btn => {
                     btn.addEventListener('click', async (e) => {
-                        const id = (e.target as HTMLElement).getAttribute('data-id');
-                        const button = e.target as HTMLButtonElement;
-                        const request = activeRequests.find((r: any) => r.id === id);
+                        const id = e.target.getAttribute('data-id');
+                        const button = e.target;
+                        const request = activeRequests.find(r => r.id === id);
                         if (!request) return;
 
                         try {
@@ -839,8 +928,19 @@
                             const origText = button.textContent;
                             button.textContent = 'Verificando...';
 
-                            const creds = savedCredentials[request.rfc];
-                            const body: any = { id: request.id, cerBase64: creds?.cerBase64, keyBase64: creds?.keyBase64, password: creds?.password };
+                            let creds = savedCredentials[request.rfc];
+                            if (!creds || !creds.cerBase64 || !creds.keyBase64 || !creds.password) {
+                                const provided = await askForCredentials(request.rfc);
+                                if (provided) {
+                                    creds = { cerBase64: provided.cerBase64, keyBase64: provided.keyBase64, password: provided.password };
+                                } else {
+                                    button.textContent = origText;
+                                    button.disabled = false;
+                                    return;
+                                }
+                            }
+
+                            const body = { id: request.id, cerBase64: creds?.cerBase64, keyBase64: creds?.keyBase64, password: creds?.password };
 
                             const res = await fetch(`/api/sat/verificar`, {
                                 method: 'POST',
@@ -854,19 +954,16 @@
                                 request.packageId = check.packageId;
                                 localStorage.setItem('satRequests', JSON.stringify(activeRequests));
                                 updateUI();
-
-                                // Descargar inmediatamente si está listo
                                 await processDownload(request);
                                 updateUI();
                             } else {
-                                // No está listo aún
                                 maybeNotify('Aún Pendiente', 'La solicitud todavía se encuentra en proceso en el SAT. Reintenta más tarde.', 'info');
                                 button.textContent = origText;
                                 button.disabled = false;
                             }
                         } catch (err) {
                             console.error('Error al verificar manualmente:', err);
-                                showModal('Error', 'Ocurrió un error al verificar la solicitud.', 'error');
+                            showModal('Error', 'Ocurrió un error al verificar la solicitud.', 'error');
                             button.disabled = false;
                         }
                     });
@@ -874,7 +971,7 @@
 
                 document.querySelectorAll('.btn-delete-pending').forEach(btn => {
                     btn.addEventListener('click', async (e) => {
-                        const index = parseInt((e.target as HTMLElement).getAttribute('data-index')!);
+                        const index = parseInt(e.target.getAttribute('data-index'));
                         if (!Number.isNaN(index)) {
                             const confirmed = await showConfirm('Confirmar eliminación', '¿Eliminar esta solicitud pendiente?');
                             if (confirmed) {
@@ -895,7 +992,7 @@
         function updateHistoryUI() {
             if (savedXmls.length > 0) {
                 historyCard.style.display = 'block';
-                xmlTableBody.innerHTML = savedXmls.map((xml: any, index: number) => `
+                xmlTableBody.innerHTML = savedXmls.map((xml, index) => `
                     <tr>
                         <td>${xml.fecha ? xml.fecha.split('T')[0] : 'N/A'}</td>
                         <td>${xml.emisorRfc || 'N/A'}</td>
@@ -910,7 +1007,7 @@
 
                 document.querySelectorAll('.btn-delete-small').forEach(btn => {
                     btn.addEventListener('click', (e) => {
-                        const index = parseInt((e.target as HTMLElement).getAttribute('data-index')!);
+                        const index = parseInt(e.target.getAttribute('data-index'));
                         savedXmls.splice(index, 1);
                         localStorage.setItem('satXmlHistory', JSON.stringify(savedXmls));
                         updateHistoryUI();
@@ -931,8 +1028,8 @@
             }
         });
 
-        function saveDownloadedXmls(xmls: any[], rfc: string) {
-            xmls.forEach((xmlFile: any) => {
+        function saveDownloadedXmls(xmls, rfc) {
+            xmls.forEach((xmlFile) => {
                 try {
                     const parsed = parser.parse(xmlFile.content);
                     const comp = parsed.Comprobante;
@@ -955,8 +1052,7 @@
                         esEmisor: comp.Emisor?.Rfc?.toUpperCase() === rfc?.toUpperCase()
                     };
 
-                    // Evitar duplicados por UUID
-                    if (historyItem.uuid && !savedXmls.some((x: any) => x.uuid === historyItem.uuid)) {
+                    if (historyItem.uuid && !savedXmls.some(x => x.uuid === historyItem.uuid)) {
                         savedXmls.push(historyItem);
                     }
                 } catch (e) {
@@ -967,14 +1063,13 @@
             updateHistoryUI();
         }
 
-        function exportToExcel(tipo: 'emitidas' | 'recibidas') {
-            // Re-mapear para que las columnas salgan bonitas en Excel
+        function exportToExcel(tipo) {
             const worksheetData = savedXmls
-                .filter((xml: any) => {
+                .filter(xml => {
                     const isEmitida = xml.esEmisor === true;
                     return tipo === 'emitidas' ? isEmitida : !isEmitida;
                 })
-                .map((xml: any) => ({
+                .map(xml => ({
                     'Fecha': xml.fecha,
                     'UUID': xml.uuid,
                     'RFC Emisor': xml.emisorRfc,
@@ -988,7 +1083,7 @@
                     'Versión': xml.version
                 }));
 
-                if (worksheetData.length === 0) {
+            if (worksheetData.length === 0) {
                 maybeNotify('Sin Datos', `No hay facturas ${tipo} para exportar.`, 'info');
                 return;
             }
@@ -1002,18 +1097,80 @@
         exportExcelEmitidos.addEventListener('click', () => exportToExcel('emitidas'));
         exportExcelRecibidos.addEventListener('click', () => exportToExcel('recibidas'));
 
-        async function fileToBase64(file: File): Promise<string> {
+        async function fileToBase64(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 reader.readAsDataURL(file);
-                reader.onload = () => resolve(reader.result as string);
+                reader.onload = () => resolve(reader.result);
                 reader.onerror = error => reject(error);
             });
         }
 
-        async function downloadXmlsAsZip(xmls: any[], packageId: string) {
+        const credsModalOverlay = document.getElementById('credsModalOverlay');
+        const credsModalConfirm = document.getElementById('credsModalConfirm');
+        const credsModalCancel = document.getElementById('credsModalCancel');
+
+        function askForCredentials(defaultRfc) {
+            return new Promise(async (resolve) => {
+                try {
+                    const modalRfc = document.getElementById('modal-rfc');
+                    if (modalRfc && defaultRfc) modalRfc.value = defaultRfc;
+
+                    credsModalOverlay.style.display = 'flex';
+
+                    const cleanup = () => {
+                        credsModalOverlay.style.display = 'none';
+                        if (credsModalConfirm) credsModalConfirm.onclick = null;
+                        if (credsModalCancel) credsModalCancel.onclick = null;
+                    };
+
+                    if (credsModalCancel) credsModalCancel.onclick = () => { cleanup(); resolve(null); };
+
+                    if (credsModalConfirm) credsModalConfirm.onclick = async () => {
+                        const cerFileEl = document.getElementById('modal-cerFile');
+                        const keyFileEl = document.getElementById('modal-keyFile');
+                        const passEl = document.getElementById('modal-password');
+                        const rfcEl = document.getElementById('modal-rfc');
+                        const saveEl = document.getElementById('modal-saveCreds');
+
+                        const cerFile = cerFileEl?.files?.[0];
+                        const keyFile = keyFileEl?.files?.[0];
+                        const password = passEl?.value || '';
+                        const rfcVal = (rfcEl?.value || defaultRfc || '').toUpperCase().trim();
+
+                        if (!cerFile || !keyFile || !password) {
+                            showModal('Faltan Credenciales', 'Debes cargar .cer, .key y la contraseña en el modal.', 'error');
+                            return;
+                        }
+
+                        const cerBase64 = await fileToBase64(cerFile);
+                        const keyBase64 = await fileToBase64(keyFile);
+
+                        if (saveEl && saveEl.checked && rfcVal) {
+                            savedCredentials[rfcVal] = {
+                                cerBase64,
+                                keyBase64,
+                                password,
+                                cerName: cerFile.name,
+                                keyName: keyFile.name
+                            };
+                            localStorage.setItem('satCredentials', JSON.stringify(savedCredentials));
+                            updateSavedRfcDropdown();
+                        }
+
+                        cleanup();
+                        resolve({ cerBase64, keyBase64, password, rfc: rfcVal });
+                    };
+                } catch (e) {
+                    console.error('askForCredentials error', e);
+                    resolve(null);
+                }
+            });
+        }
+
+        async function downloadXmlsAsZip(xmls, packageId) {
             const zip = new JSZip();
-            xmls.forEach((xml: any) => {
+            xmls.forEach((xml) => {
                 zip.file(xml.name, xml.content);
             });
             const blob = await zip.generateAsync({ type: 'blob' });
@@ -1027,28 +1184,23 @@
             document.body.removeChild(a);
         }
 
-        async function processDownload(req: any) {
+        async function processDownload(req) {
             try {
                 let cerBase64 = '';
                 let keyBase64 = '';
                 let password = passwordInput.value;
 
-                // 1. Prioridad: ¿Tenemos este RFC guardado en localStorage?
                 const specificCreds = savedCredentials[req.rfc];
                 
                 if (specificCreds) {
                     cerBase64 = specificCreds.cerBase64;
                     keyBase64 = specificCreds.keyBase64;
                     password = specificCreds.password || password;
-                } 
-                // 2. Si no, ¿hay algo seleccionado actualmente en el dropdown?
-                else if (selectedSavedCreds) {
+                } else if (selectedSavedCreds) {
                     cerBase64 = selectedSavedCreds.cerBase64;
                     keyBase64 = selectedSavedCreds.keyBase64;
                     password = selectedSavedCreds.password || password;
-                } 
-                // 3. Si no, usar los archivos cargados manualmente
-                else {
+                } else {
                     const cerFile = cerInput.files?.[0];
                     const keyFile = keyInput.files?.[0];
                     if (cerFile) cerBase64 = await fileToBase64(cerFile);
@@ -1056,8 +1208,14 @@
                 }
 
                 if (!cerBase64 || !keyBase64 || !password) {
-                    showModal('Faltan Credenciales', 'Para descargar el paquete necesitas tener cargados el archivo .cer, .key y la contraseña.', 'error');
-                    return;
+                    const provided = await askForCredentials(req.rfc);
+                    if (!provided) {
+                        showModal('Faltan Credenciales', 'No se proporcionaron credenciales. Operación cancelada.', 'error');
+                        return;
+                    }
+                    cerBase64 = provided.cerBase64;
+                    keyBase64 = provided.keyBase64;
+                    password = provided.password;
                 }
 
                 const response = await fetch('/api/sat/descargar', {
@@ -1079,10 +1237,7 @@
                     req.status = 'downloaded';
                     req.xmlCount = downloadData.count;
                     localStorage.setItem('satRequests', JSON.stringify(activeRequests));
-                    
-                    // Guardar en historial
                     saveDownloadedXmls(downloadData.xmls, req.rfc);
-                    
                     showModal('Descarga Exitosa', `Se han descargado y guardado ${downloadData.count} XMLs correctamente.`, 'success');
                 } else {
                     console.warn('Fallo descarga manual:', downloadData.message);
@@ -1094,9 +1249,9 @@
             }
         }
 
-        function base64ToBlob(base64: string, filename: string): File {
+        function base64ToBlob(base64, filename) {
             const arr = base64.split(',');
-            const mime = arr[0].match(/:(.*?);/)![1];
+            const mime = arr[0].match(/:(.*?);/)[1];
             const bstr = atob(arr[1]);
             let n = bstr.length;
             const u8arr = new Uint8Array(n);
@@ -1120,7 +1275,6 @@
 
             const formData = new FormData();
             
-            // Usar archivos cargados o archivos guardados
             let cerFile = cerInput.files?.[0];
             let keyFile = keyInput.files?.[0];
 
@@ -1147,7 +1301,6 @@
             formData.append('rfc', rfc);
 
             try {
-                // Paso 1: Llamar a nuestra API local
                 const response = await fetch('/api/sat/solicitar', {
                     method: 'POST',
                     body: formData
@@ -1156,9 +1309,8 @@
                 const result = await response.json();
 
                 if (result.success) {
-                    const finalRfc = result.rfc || rfc; // Usar el RFC devuelto por el servidor si el manual está vacío
+                    const finalRfc = result.rfc || rfc;
 
-                    // Si el usuario pidió guardar credenciales, lo hacemos ahora que sabemos el RFC real
                     if (saveCredsCheckbox.checked) {
                         const cerB64 = await fileToBase64(cerFile);
                         const keyB64 = await fileToBase64(keyFile);
@@ -1196,10 +1348,9 @@
                     if (keyInfo) keyInfo.textContent = '';
                     savedRfcSelect.value = "";
 
-                    // Restaurar fechas después del reset
-                    if (dateStartInput) (dateStartInput as HTMLInputElement).value = localStorage.getItem('satDateStart') || '';
-                    if (dateEndInput) (dateEndInput as HTMLInputElement).value = localStorage.getItem('satDateEnd') || '';
-                    showModal('Solicitud Enviada', 'La solicitud se envió con éxito al SAT. Revisaremos el estatus automáticamente cada 30 segundos.', 'success');
+                    if (dateStartInput) dateStartInput.value = localStorage.getItem('satDateStart') || '';
+                    if (dateEndInput) dateEndInput.value = localStorage.getItem('satDateEnd') || '';
+                    showToast('Solicitud Enviada', 'La solicitud se envió con éxito al SAT. Revisaremos el estatus automáticamente cada 2 minutos.', 'success');
                 } else {
                     showModal('Error del SAT', result.message, 'error');
                 }
@@ -1212,7 +1363,7 @@
             }
         });
 
-        // Polling cada minuto
+        // Polling cada 2 minutos
         setInterval(async () => {
             if (activeRequests.length === 0) return;
 
@@ -1221,13 +1372,12 @@
                 const req = activeRequests[i];
                 try {
                     const creds = savedCredentials[req.rfc];
-                    const authBody: any = { 
+                    const authBody = { 
                         cerBase64: creds?.cerBase64,
                         keyBase64: creds?.keyBase64,
                         password: creds?.password
                     };
 
-                    // 1. Si está pendiente (o listo pero sin packageId), verificar estatus para obtenerlo
                     if (req.status === 'pending' || (req.status === 'ready' && !req.packageId)) {
                         const res = await fetch(`/api/sat/verificar`, {
                             method: 'POST',
@@ -1244,8 +1394,6 @@
                         }
                     }
 
-
-                    // 2. Si está listo (o recién pasó a listo), intentar descarga automática
                     if (req.status === 'ready' && req.packageId) {
                         console.log('Iniciando descarga automática para:', req.packageId);
                         const downloadRes = await fetch(`/api/sat/descargar`, {
@@ -1261,10 +1409,7 @@
                             req.status = 'downloaded';
                             req.xmlCount = downloadData.count;
                             localStorage.setItem('satRequests', JSON.stringify(activeRequests));
-                            
-                            // Guardar en historial
                             saveDownloadedXmls(downloadData.xmls, req.rfc);
-                            
                             updateUI();
                         } else {
                             console.warn('Fallo descarga automática:', downloadData.message);
@@ -1274,17 +1419,16 @@
                     console.error('Error en polling:', e);
                 }
             }
-            nextCheckTime = Date.now() + 30000;
+            nextCheckTime = Date.now() + 120000;
             updateUI();
-        }, 30000);
+        }, 120000);
 
         // Actualizar contador visual cada segundo
         setInterval(() => {
-            if (activeRequests.some((r: any) => r.status === 'pending')) {
+            if (activeRequests.some(r => r.status === 'pending')) {
                 updateUI();
             }
         }, 1000);
-
     </script>
 </body>
 </html>
