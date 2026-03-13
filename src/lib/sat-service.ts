@@ -1,6 +1,6 @@
 // @ts-nocheck
 import forge from 'node-forge';
-import { randomUUID } from 'node:crypto';
+import { randomUUID } from 'crypto';
 import { SignedXml } from 'xml-crypto';
 import axios from 'axios';
 
