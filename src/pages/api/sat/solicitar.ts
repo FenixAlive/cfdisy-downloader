@@ -20,8 +20,17 @@ export const POST = async ({ request }: { request: Request }) => {
         const rfcManual = data.get('rfc') as string;
         const saveCreds = data.get('saveCreds') === 'true';
 
-        const cerBuffer = Buffer.from(await cer.arrayBuffer());
-        const keyBuffer = Buffer.from(await key.arrayBuffer());
+        const cerBuffer = new Uint8Array(await cer.arrayBuffer());
+        const keyBuffer = new Uint8Array(await key.arrayBuffer());
+
+        // Función para convertir Uint8Array a base64
+        const uint8ArrayToBase64 = (bytes: Uint8Array): string => {
+            let binaryString = '';
+            for (let i = 0; i < bytes.length; i++) {
+                binaryString += String.fromCharCode(bytes[i]);
+            }
+            return btoa(binaryString);
+        };
 
         // 1. Parsear credenciales
         const creds = await SATService.parseCredentials(cerBuffer, keyBuffer, password);
@@ -43,8 +52,8 @@ export const POST = async ({ request }: { request: Request }) => {
             requestId: result.idSolicitud,
             rfc: rfcManual || creds.rfc,
             saveCredentials: saveCreds ? {
-                cerBase64: `data:application/x-x509-ca-cert;base64,${cerBuffer.toString('base64')}`,
-                keyBase64: `data:application/pkcs8;base64,${keyBuffer.toString('base64')}`,
+                cerBase64: `data:application/x-x509-ca-cert;base64,${uint8ArrayToBase64(cerBuffer)}`,
+                keyBase64: `data:application/pkcs8;base64,${uint8ArrayToBase64(keyBuffer)}`,
                 password: password,
                 cerName: cer.name,
                 keyName: key.name

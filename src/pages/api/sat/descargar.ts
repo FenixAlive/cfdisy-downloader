@@ -1,5 +1,4 @@
 import { SATService } from '../../../lib/sat-service-simple';
-import JSZip from 'jszip';
 
 export const POST = async ({ request }: { request: Request }) => {
     try {
@@ -20,17 +19,7 @@ export const POST = async ({ request }: { request: Request }) => {
 
         if (!result.xmls || result.xmls.length === 0) throw new Error('El SAT no devolvió el contenido del paquete (puede estar aún procesándose internamente).');
 
-        const zipBuffer = Buffer.from(base64Zip, 'base64');
-        const zip = await JSZip.loadAsync(zipBuffer);
-
-        const xmls: { name: string; content: string }[] = [];
-        for (const [name, file] of Object.entries(zip.files)) {
-            if (name.endsWith('.xml') && !file.dir) {
-                const content = await file.async('string');
-                xmls.push({ name, content });
-            }
-        }
-
+        // Retornar los XMLs directamente sin procesar ZIP
         return new Response(JSON.stringify({ 
             success: true, 
             count: result.xmls.length,

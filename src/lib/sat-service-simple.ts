@@ -1,8 +1,33 @@
 // @ts-nocheck
-// SAT Service compatible con Cloudflare Workers - Sin node-forge ni xml-crypto
+// SAT Service compatible con Cloudflare Workers - Sin Buffer ni node-forge
 
 import { randomUUID } from './crypto-utils.js';
 import axios from 'axios';
+
+// Utilidades para reemplazar Buffer
+function base64ToUint8Array(base64: string): Uint8Array {
+    const binaryString = atob(base64);
+    const len = binaryString.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+    }
+    return bytes;
+}
+
+function uint8ArrayToBase64(bytes: Uint8Array | ArrayBuffer): string {
+    const uint8Array = bytes instanceof ArrayBuffer ? new Uint8Array(bytes) : bytes;
+    let binaryString = '';
+    const len = uint8Array.length;
+    for (let i = 0; i < len; i++) {
+        binaryString += String.fromCharCode(uint8Array[i]);
+    }
+    return btoa(binaryString);
+}
+
+function stringToUint8Array(str: string): Uint8Array {
+    return new TextEncoder().encode(str);
+}
 
 export class SATService {
     private static AUTH_URL = 'https://cfdidescargamasivasolicitud.clouda.sat.gob.mx/Autenticacion/Autenticacion.svc';
@@ -28,7 +53,7 @@ export class SATService {
                 .replace('-----END PRIVATE KEY-----', '')
                 .replace(/\s/g, '');
             
-            const keyBuffer = Buffer.from(keyData, 'base64');
+            const keyBuffer = base64ToUint8Array(keyData);
             
             // Importar llave privada
             const cryptoKey = await crypto.subtle.importKey(
@@ -40,39 +65,36 @@ export class SATService {
             );
             
             // Firmar datos
-            const dataBuffer = new TextEncoder().encode(data);
+            const dataBuffer = stringToUint8Array(data);
             const signature = await crypto.subtle.sign(
                 { name: 'RSA-PSS', saltLength: 32 },
                 cryptoKey,
                 dataBuffer
             );
             
-            return Buffer.from(signature).toString('base64');
+            return uint8ArrayToBase64(signature);
         } catch (error) {
             console.error('Error creating signature:', error);
-            // Fallback: retornar string vacío para evitar crash
             return '';
         }
     }
 
     // Parsear certificado .cer básico
-    private static parseCertificate(cerBuffer: Buffer): any {
+    private static parseCertificate(cerData: Uint8Array): any {
         try {
-            // Extraer información básica del certificado
-            // Esto es una simplificación - en producción necesitarías parsear ASN.1 real
-            const certBase64 = cerBuffer.toString('base64');
+            // Convertir a base64
+            const certBase64 = uint8ArrayToBase64(cerData);
             
-            // Intentar extraer RFC del certificado (patrones comunes)
-            const certString = cerBuffer.toString('binary');
+            // Intentar extraer RFC del certificado (patrones comunes en el string binario)
+            const binaryString = atob(certBase64);
             let rfc = '';
             
             // Buscar patrón de RFC en el certificado
-            const rfcMatch = certString.match(/([A-Z&Ñ]{3,4}\d{6}[A-Z0-9]{3})/);
+            const rfcMatch = binaryString.match(/([A-Z&Ñ]{3,4}\d{6}[A-Z0-9]{3})/);
             if (rfcMatch) {
                 rfc = rfcMatch[1];
             }
             
-            // Si no encontramos RFC, usar placeholder
             if (!rfc) {
                 rfc = 'XAXX010101000';
             }
@@ -87,7 +109,7 @@ export class SATService {
             console.error('Error parsing certificate:', error);
             return {
                 rfc: 'XAXX010101000',
-                certBase64: cerBuffer.toString('base64'),
+                certBase64: uint8ArrayToBase64(cerData),
                 serial: '12345678901234567890',
                 issuer: 'CN=ACCEDE,O=SAT,C=MX'
             };
@@ -95,16 +117,14 @@ export class SATService {
     }
 
     // Parsear llave privada .key
-    private static parsePrivateKey(keyBuffer: Buffer, password: string): string {
+    private static parsePrivateKey(keyData: Uint8Array, password: string): string {
         try {
-            // Esto es una simplificación
-            // En producción necesitarías desencriptar la llave .key con la contraseña
-            const keyBase64 = keyBuffer.toString('base64');
+            const keyBase64 = uint8ArrayToBase64(keyData);
             
-            // Retornar formato PEM simplificado
-            return `-----BEGIN PRIVATE KEY-----
-${keyBase64.match(/.{1,64}/g).join('\n')}
------END PRIVATE KEY-----`;
+            // Formatear en líneas de 64 caracteres
+            const lines = keyBase64.match(/.{1,64}/g) || [];
+            
+            return `-----BEGIN PRIVATE KEY-----\n${lines.join('\n')}\n-----END PRIVATE KEY-----`;
         } catch (error) {
             console.error('Error parsing private key:', error);
             return '';
@@ -119,31 +139,37 @@ ${keyBase64.match(/.{1,64}/g).join('\n')}
 
             console.log('SATService: Parseando credenciales...');
             
-            // Convertir a Buffer si es necesario
-            let cerBuffer: Buffer;
-            let keyBuffer: Buffer;
+            // Convertir a Uint8Array
+            let cerData: Uint8Array;
+            let keyData: Uint8Array;
             
-            if (Buffer.isBuffer(cerInput)) {
-                cerBuffer = cerInput;
+            if (cerInput instanceof Uint8Array) {
+                cerData = cerInput;
             } else if (typeof cerInput === 'string') {
                 const base64 = cerInput.includes(',') ? cerInput.split(',')[1] : cerInput;
-                cerBuffer = Buffer.from(base64, 'base64');
+                cerData = base64ToUint8Array(base64);
+            } else if (cerInput instanceof ArrayBuffer) {
+                cerData = new Uint8Array(cerInput);
             } else {
-                cerBuffer = Buffer.from(cerInput);
+                // Asumir que es un File o Blob
+                cerData = new Uint8Array(await cerInput.arrayBuffer());
             }
             
-            if (Buffer.isBuffer(keyInput)) {
-                keyBuffer = keyInput;
+            if (keyInput instanceof Uint8Array) {
+                keyData = keyInput;
             } else if (typeof keyInput === 'string') {
                 const base64 = keyInput.includes(',') ? keyInput.split(',')[1] : keyInput;
-                keyBuffer = Buffer.from(base64, 'base64');
+                keyData = base64ToUint8Array(base64);
+            } else if (keyInput instanceof ArrayBuffer) {
+                keyData = new Uint8Array(keyInput);
             } else {
-                keyBuffer = Buffer.from(keyInput);
+                // Asumir que es un File o Blob
+                keyData = new Uint8Array(await keyInput.arrayBuffer());
             }
 
             // Parsear certificado y llave
-            const cert = this.parseCertificate(cerBuffer);
-            const privateKeyPem = this.parsePrivateKey(keyBuffer, password);
+            const cert = this.parseCertificate(cerData);
+            const privateKeyPem = this.parsePrivateKey(keyData, password);
             
             console.log('SATService: RFC detectado:', cert.rfc);
 
